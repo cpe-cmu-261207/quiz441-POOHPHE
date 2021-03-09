@@ -9,7 +9,8 @@ import fs from 'fs'
 const app = express()
 app.use(bodyParser.json())
 app.use(cors())
-
+let username_login: any;
+let user_index: any;
 const PORT = process.env.PORT || 3000
 const SECRET = "SIMPLE_SECRET"
 interface DbSchema {
@@ -36,7 +37,16 @@ body('password').isString(),
     const body = req.body
     const raw = fs.readFileSync('db.json', 'utf8')
     const db: DbSchema = JSON.parse(raw)
-  const user = db.users.find(user => user.username === body.username)
+    const user = db.users.find(user => user.username === body.username)
+let i =0,found =false
+    db.users.forEach(user => {
+     if(user.username === body.username){
+       found = true
+       user_index = i
+     }else if(!found){
+      i = i+1
+     }
+   })
   if (!user) {
     res.status(400)
     res.json({ message: 'Invalid username or password' })
@@ -51,6 +61,8 @@ body('password').isString(),
     { username: user.username } as JWTpayload, 
     SECRET
   )
+  console.log("1"+token)
+  username_login = body.username
     return res.status(200).json({
       message: 'Login succesfully',
       token: token
@@ -68,9 +80,9 @@ body('password').isString(),
     const { username, password, firstname, lastname, balance } = req.body
 
     const buffer = fs.readFileSync("db.json", "utf-8" );
-    const data = JSON.parse(buffer);
+    const db = JSON.parse(buffer);
 
-    const isExistUser = data.users.find((value: { username: any }) => value.username === username);
+    const isExistUser = db.users.find((value: { username: any }) => value.username === username);
 
     if(isExistUser){
       return res.status(400).json({
@@ -78,14 +90,14 @@ body('password').isString(),
       })
     }
 
-    data.users.push({
+    db.users.push({
       username,
       password,
       firstname,
       lastname,
       balance
     });
-    fs.writeFileSync("./db.json", JSON.stringify(data));
+    fs.writeFileSync("./db.json", JSON.stringify(db));
 
     return res.status(200).json({
       message: "Register successfully"
@@ -94,13 +106,18 @@ body('password').isString(),
 
 app.get('/balance',
   (req, res) => {
-    const token = req.query.token as string
+    //const token = req.query.token as string
+    //console.log(token)
     try {
 
-      const username = jwt.verify(token, SECRET) as JWTpayload
+      //const username = jwt.verify(token, SECRET) as JWTpayload
       const raw = fs.readFileSync('db.json', 'utf8')
       const db: DbSchema = JSON.parse(raw)
-      //sconst todos = db.users[username.username]
+      const todos = db.users[user_index].balance
+      res.json({
+        name: String(username_login),
+        balance: todos
+      })
     }
     catch (e) {
       //response in case of invalid token
@@ -115,23 +132,53 @@ app.get('/balance',
 app.post('/deposit',
   body('amount').isInt({ min: 1 }),
   (req, res) => {
-    //const token = req.query.token as string
-    //Is amount <= 0 ?
-    if (!validationResult(req).isEmpty())
-      return res.status(400).json({ message: "Invalid data" })
-    
+    try{
+      //const token = req.query.token as string
+          //Is amount <= 0 ?
+          if (!validationResult(req).isEmpty())
+            return res.status(400).json({ message: "Invalid data" })
+          
+          const raw = fs.readFileSync('db.json', 'utf8')
+          const db: DbSchema = JSON.parse(raw) 
+          const {amount} = req.body
+          
+          let todos = db.users[user_index].balance+amount
+          db.users[user_index].balance = todos
+          fs.writeFileSync("./db.json", JSON.stringify(db));
+            res.json({"message": "Deposit successfully",
+            "balance": todos
+          })
+    }catch(e){
+      res.status(401).json({ message: "Invalid token" })
+    }
+   
   })
 
 app.post('/withdraw',
   (req, res) => {
-    const token = req.query.token as string
+    //const token = req.query.token as string
     const {amount} = req.body
 
     try{
-      const data = jwt.verify(token, SECRET) as JWTPayload
-      const raw = fs.readFileSync('db.json', 'utf8')
-      const db: DbSchema = JSON.parse(raw)
       
+      //const data = jwt.verify(token, SECRET) as JWTPayload
+      const raw = fs.readFileSync('db.json', 'utf8')
+      const db: DbSchema = JSON.parse(raw) 
+      
+      let todos = db.users[user_index].balance
+     
+      if(todos<amount){
+        res.status(400)
+        res.json({ message:  "Invalid data" })
+      }
+      
+      let mm = todos-amount
+      db.users[user_index].balance = mm
+      fs.writeFileSync("./db.json", JSON.stringify(db));
+      res.json({"message": "Deposit successfully",
+      "balance": mm
+    })
+
     }catch(e){
       res.status(401)
       res.json({ message:  "Invalid token" })
