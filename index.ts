@@ -61,7 +61,7 @@ let i =0,found =false
     { username: user.username } as JWTpayload, 
     SECRET
   )
-  console.log("1"+token)
+  console.log(token)
   username_login = body.username
     return res.status(200).json({
       message: 'Login succesfully',
@@ -106,8 +106,8 @@ let i =0,found =false
 
 app.get('/balance',
   (req, res) => {
-    //const token = req.query.token as string
-    //console.log(token)
+    const token = req.query.token as string
+    console.log(token)
     try {
 
       //const username = jwt.verify(token, SECRET) as JWTpayload
@@ -131,9 +131,11 @@ app.get('/balance',
 
 app.post('/deposit',
   body('amount').isInt({ min: 1 }),
+  
   (req, res) => {
+    
     try{
-      //const token = req.query.token as string
+      
           //Is amount <= 0 ?
           if (!validationResult(req).isEmpty())
             return res.status(400).json({ message: "Invalid data" })
