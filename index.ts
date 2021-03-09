@@ -141,7 +141,10 @@ app.post('/deposit',
           const raw = fs.readFileSync('db.json', 'utf8')
           const db: DbSchema = JSON.parse(raw) 
           const {amount} = req.body
-          
+          if(amount<=0){
+            res.status(400)
+            res.json({ message:  "Invalid data" })
+          }
           let todos = db.users[user_index].balance+amount
           db.users[user_index].balance = todos
           fs.writeFileSync("./db.json", JSON.stringify(db));
@@ -167,7 +170,7 @@ app.post('/withdraw',
       
       let todos = db.users[user_index].balance
      
-      if(todos<amount){
+      if(todos<amount  || amount<=0){
         res.status(400)
         res.json({ message:  "Invalid data" })
       }
